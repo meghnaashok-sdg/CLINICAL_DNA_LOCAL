@@ -1,0 +1,16 @@
+# ---- Data: never commit Manish's raw extracts (large + sensitive) ----
+data/*.csv
+data/*.parquet
+output/*.csv
+output/*.parquet
+
+# ---- Python ----
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ---- OS / editor ----
+.DS_Store
+*.duckdb

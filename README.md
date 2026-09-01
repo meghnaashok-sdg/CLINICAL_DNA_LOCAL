@@ -1,0 +1,130 @@
+# Clinic DNA — Local Pipeline (DuckDB)
+
+Run the **exact compiled dbt models** on your laptop against Manish's CSV extracts,
+instead of Snowflake — so you can read, run, and change the logic while waiting on
+warehouse access. Output matches production.
+
+---
+
+## Why this exists
+
+The pipeline is 9 dbt SQL models that normally run in Snowflake reading
+`SBX_EXT_SALES_HUB.HILLS_US.*` tables. Without access you can't run them there.
+This project:
+- loads the **4 source tables** (CSV exports from Manish) into DuckDB,
+- runs the **9 compiled models in order** (each output feeds the next),
+- writes the final recommendations to `output/recommendations_local.csv`.
+
+**The model SQL in `models/` is byte-for-byte identical to what's in the warehouse.**
+We never edit the vendor code — all Snowflake→DuckDB translation happens at *run time*
+inside `run_pipeline.py`. That keeps `models/` as a clean **base** for version control.
+
+---
+
+## One-time setup
+
+```bash
+# 1. clone your repo, then from the project root:
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# 2. put Manish's 4 CSVs in data/  (see data/README.md — they're git-ignored)
+```
+
+## Run it
+
+```bash
+python run_pipeline.py           # runs all 9 models -> output/recommendations_local.csv
+python run_pipeline.py --peek    # also prints 3 sample rows per model
+```
+
+You should see all 9 models build and end with `~37,830 rows`.
+
+## Explore any intermediate table
+
+```bash
+python -i scripts/explore.py
+>>> show('int_hills_us_clinic_dna_clusters')          # peek at any model
+>>> df = tbl('int_hills_us_clinic_dna_clinic_opportunity')   # -> pandas DataFrame
+>>> con.execute("select cluster, count(*) from int_hills_us_clinic_dna_clusters group by 1").df()
+```
+
+---
+
+## The 4 source tables (inputs)
+
+| CSV | What it is | Feeds |
+|---|---|---|
+| `scenario_analysis_joined` | **The sales spine** — clinic × category × species × month, sales/volume + scenario stickers | everything |
+| `executive_summary` | Raw field-activity + channel sales (ECC/Chewy/VSHD, $ and LBS) | clusters (history) |
+| `action_summary` | Per-clinic visit/education/sample totals + last-dates | final_opportunity |
+| `recommendation_setup` | Clinic names, territory/region/district | naming in models 8–9 |
+
+> ⚠️ **Note:** `recommendation_setup` in the export is a *wide, near-final* table (it
+> already contains cluster/tier/opportunity-ish columns). The code only reads it for
+> **names + territory**, so it works fine as a source — don't be confused by the extra columns.
+
+Data range: ~24 months (models use a 12-month rolling window + a 24-months-ago baseline).
+Current extract = 2024-09 → 2026-08, so the run produces **September 2026** recommendations.
+
+---
+
+## How the Snowflake→DuckDB translation works (in `run_pipeline.py`)
+
+All done at run time so the base SQL stays untouched:
+
+1. **Schema prefix** `SBX_EXT_SALES_HUB.HILLS_US.` stripped → bare local table names.
+2. **Reserved alias** `at` → `"at"` (reserved word in DuckDB).
+3. **Date functions** `dateadd` / `datediff` → DuckDB macros; bare date-parts (`month`) quoted.
+4. **Row generator** `table(generator(rowcount => 12))` + `seq4()` → `range(12)`.
+5. **Types** `number` → `double` / `decimal`.
+6. **Exact-decimal load** — the money/volume columns are cast to `DECIMAL(38,6)` so
+   sales+returns that cancel sum to **exactly 0** (matching Snowflake). *Without this,
+   floating-point residue slips past the code's `nullif(...,0)` guards and blows up the
+   seasonality ratios to 1e16.* (This was the one real gotcha — see git history.)
+
+If a future model uses another Snowflake-only function, add it to the same rewrite section.
+
+---
+
+## Git workflow (the plan)
+
+```
+main        ← BASE: the untouched compiled code + this runner   (commit 1)
+             ↑ every change is a commit on top of this
+```
+
+- **Commit 1 (base):** the compiled models exactly as Manish sent them + this local runner.
+  This is the reference point — the "what production does today" snapshot.
+- **Subsequent commits:** your actual changes (e.g. the Antelligence-enriched clustering,
+  wiring up `next_step`, de-hardcoding thresholds). Each change = its own commit/branch,
+  so you can always diff against base and prove what you changed.
+- **Never commit `data/` or `output/`** — they're git-ignored (large + client data).
+
+Suggested branch names: `feat/antelligence-clustering`, `fix/next-step-wiring`,
+`fix/anchoring-current-date`.
+
+---
+
+## Validating against production
+
+`output/recommendations_local.csv` should match the shape of Manish's
+`august_2026_recommendations.csv` (same 29 columns, ~37.8k rows, opportunity mean ~$20–30,
+median $0, exactly 14 samples/TM, education on ~5–13% of clinics). The month differs
+(this run = September, because the data now extends to Aug). Use the
+**Recommendation-QA notebook** to diff any run against the baseline.
+
+---
+
+## Files
+
+```
+run_pipeline.py       ← the runner (loads CSVs, translates, runs 9 models)
+models/               ← the 9 compiled dbt models (BASE — do not edit)
+data/                 ← Manish's CSVs go here (git-ignored)
+output/               ← results land here (git-ignored)
+scripts/explore.py    ← interactive: inspect any intermediate table
+requirements.txt
+.vscode/              ← recommended extensions + settings
+```
