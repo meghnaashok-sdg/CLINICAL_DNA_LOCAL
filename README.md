@@ -40,10 +40,6 @@ python -i scripts/explore.py
 | `action_summary` | Per-clinic visit/education/sample totals + last-dates | final_opportunity |
 | `recommendation_setup` | Clinic names, territory/region/district | naming in models 8–9 |
 
-> ⚠️ **Note:** `recommendation_setup` in the export is a *wide, near-final* table (it
-> already contains cluster/tier/opportunity-ish columns). The code only reads it for
-> **names + territory**, so it works fine as a source — don't be confused by the extra columns.
-
 Data range: ~24 months (models use a 12-month rolling window + a 24-months-ago baseline).
 Current extract = 2024-09 → 2026-08, so the run produces **September 2026** recommendations.
 
@@ -64,25 +60,6 @@ All done at run time so the base SQL stays untouched:
    seasonality ratios to 1e16.* (This was the one real gotcha — see git history.)
 
 If a future model uses another Snowflake-only function, add it to the same rewrite section.
-
----
-
-## Git workflow (the plan)
-
-```
-main        ← BASE: the untouched compiled code + this runner   (commit 1)
-             ↑ every change is a commit on top of this
-```
-
-- **Commit 1 (base):** the compiled models exactly in sf.
-  This is the reference point — the "what production does today" snapshot.
-- **Subsequent commits:** your actual changes (e.g. the Antelligence-enriched clustering,
-  wiring up `next_step`, de-hardcoding thresholds). Each change = its own commit/branch,
-  so you can always diff against base and prove what you changed.
-- **Never commit `data/` or `output/`** — they're git-ignored (large + client data).
-
-Suggested branch names: `feat/antelligence-clustering`, `fix/next-step-wiring`,
-`fix/anchoring-current-date`.
 
 ---
 
