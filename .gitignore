@@ -1,8 +1,15 @@
 # ---- Data: never commit  raw extracts (large + sensitive) ----
 data/*.csv
 data/*.parquet
+
+# ---- Output: always the LATEST run, disposable, rewritten every time ----
 output/*.csv
-output/*.parquet
+output/models/*.csv
+
+# ---- Baseline: the FINAL recommendations snapshot IS committed (small, useful
+#      for diffing across machines/teammates). The per-model intermediate dumps
+#      are large, so those stay out. ----
+baseline/models/*.csv
 
 # ---- Python ----
 __pycache__/

@@ -1,0 +1,6 @@
+{
+  "saved_at": "2026-09-02T15:24:53.433433+00:00",
+  "final_rows": 37830,
+  "models_included": 9,
+  "note": "Snapshot of output/ at save time. Compare future runs against this with notebooks/03_compare_to_baseline.ipynb."
+}

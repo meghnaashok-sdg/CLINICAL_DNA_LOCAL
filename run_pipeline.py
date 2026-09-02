@@ -181,8 +181,10 @@ def read_model_sql(model_name):
     return sql
 
 
-def run_model(con, model_name, peek=False):
-    """Materialise one model as a DuckDB table so later models can read it."""
+def run_model(con, model_name, peek=False, dump_dir=None):
+    """Materialise one model as a DuckDB table so later models can read it.
+    If dump_dir is given, also write this model's full output as a CSV there
+    (overwritten each run — output/models/ is always 'latest run', not a baseline)."""
     inner_sql = read_model_sql(model_name).strip().rstrip(";")
     con.execute(f'CREATE OR REPLACE TABLE "{model_name}" AS\n{inner_sql}')
     n = con.execute(f'SELECT count(*) FROM "{model_name}"').fetchone()[0]
@@ -191,21 +193,27 @@ def run_model(con, model_name, peek=False):
         df = con.execute(f'SELECT * FROM "{model_name}" LIMIT 3').df()
         print(df.to_string(max_cols=8))
         print()
+    if dump_dir is not None:
+        dump_dir.mkdir(parents=True, exist_ok=True)
+        out = dump_dir / f"{model_name}.csv"
+        con.execute(f'''COPY "{model_name}" TO '{out.as_posix()}' (HEADER, DELIMITER ',')''')
     return n
 
 
 # ---------------------------------------------------------------------------
 # MAIN
 # ---------------------------------------------------------------------------
-def main(peek=False):
+def main(peek=False, dump_models=False):
     con = duckdb.connect()  # in-memory; nothing to clean up
     install_snowflake_compat(con)
     load_sources(con)
 
+    dump_dir = (OUTPUT / "models") if dump_models else None
+
     print("Running models in order ".ljust(60, "-"))
     for model in MODEL_ORDER:
         try:
-            run_model(con, model, peek=peek)
+            run_model(con, model, peek=peek, dump_dir=dump_dir)
         except Exception as e:
             print(f"\n  ERROR building {model}:\n    {e}\n")
             raise
@@ -213,7 +221,18 @@ def main(peek=False):
     # Save the final table to CSV so you can open/validate it.
     OUTPUT.mkdir(exist_ok=True)
     out_path = OUTPUT / "recommendations_local.csv"
-    con.execute(f'''COPY "{FINAL_MODEL}" TO '{out_path.as_posix()}'
+    # Column names sometimes come out lowercase for expressions built with
+    # AS <lowercase_alias> (DuckDB preserves the alias's exact case; Snowflake's
+    # own export happens to render these as UPPERCASE). Normalize to uppercase
+    # so local output is directly comparable to production without renaming.
+    con.execute(f'''
+        CREATE OR REPLACE TABLE "_final_upper" AS
+        SELECT * FROM "{FINAL_MODEL}"
+    ''')
+    cols = con.execute('DESCRIBE "_final_upper"').df()["column_name"].tolist()
+    select_upper = ", ".join(f'"{c}" AS "{c.upper()}"' for c in cols)
+    con.execute(f'CREATE OR REPLACE TABLE "_final_upper" AS SELECT {select_upper} FROM "{FINAL_MODEL}"')
+    con.execute(f'''COPY "_final_upper" TO '{out_path.as_posix()}'
                     (HEADER, DELIMITER ',')''')
     n = con.execute(f'SELECT count(*) FROM "{FINAL_MODEL}"').fetchone()[0]
     print("\nDone ".ljust(60, "-"))
@@ -225,5 +244,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--peek", action="store_true",
                     help="print row count + 3 sample rows for each model")
+    ap.add_argument("--no-dump-models", action="store_true",
+                    help="skip saving each model's output to output/models/ "
+                         "(by default every model IS dumped there, overwritten each run)")
     args = ap.parse_args()
-    main(peek=args.peek)
+    main(peek=args.peek, dump_models=not args.no_dump_models)
