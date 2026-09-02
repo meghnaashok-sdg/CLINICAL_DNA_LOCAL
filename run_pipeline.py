@@ -1,9 +1,9 @@
 """
 Clinic DNA — local pipeline runner (DuckDB)
 --------------------------------------------
-Runs the compiled dbt models locally against Manish's CSV extracts,
+Runs the compiled dbt models locally against the CSV extracts,
 instead of Snowflake. Each model's output becomes a table the next model reads,
-exactly like the real warehouse — just on your laptop.
+exactly like the real warehouse.
 
 Usage:
     python run_pipeline.py            # run all models, save final output
@@ -22,7 +22,7 @@ from pathlib import Path
 # CONFIG
 # ---------------------------------------------------------------------------
 ROOT = Path(__file__).parent
-DATA = ROOT / "data"        # put Manish's CSVs here
+DATA = ROOT / "data"        # put CSVs here
 MODELS = ROOT / "models"    # the compiled .sql files
 OUTPUT = ROOT / "output"    # final result written here
 
@@ -31,7 +31,7 @@ OUTPUT = ROOT / "output"    # final result written here
 # which will be a local DuckDB table/view instead.
 SCHEMA_PREFIX = "SBX_EXT_SALES_HUB.HILLS_US."
 
-# The 4 SOURCE tables Manish exported as CSVs -> map warehouse name : csv filename.
+# The 4 SOURCE tables  exported as CSVs -> map warehouse name : csv filename.
 # (These are the pipeline's inputs; everything else is BUILT by the models.)
 SOURCE_CSVS = {
     "int_hills_us_clinic_dna_scenario_analysis_joined":
@@ -115,7 +115,7 @@ def load_sources(con):
         if not path.exists():
             raise FileNotFoundError(
                 f"Missing source CSV: {path}\n"
-                f"  -> put Manish's export '{csv_name}' in the data/ folder."
+                f"  -> put CSV expor '{csv_name}' in the data/ folder."
             )
         # Build a SELECT that casts the money columns to DECIMAL(38,6) if needed.
         if table in DECIMAL_CAST:

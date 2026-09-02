@@ -14,3 +14,5 @@ venv/
 # ---- OS / editor ----
 .DS_Store
 *.duckdb
+
+README.md
