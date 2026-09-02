@@ -123,5 +123,5 @@ python scripts/save_baseline.py
 
 | Notebook | Compares local run to... | Use it when... |
 |---|---|---|
-| `02_validate_output.ipynb` | Manish's real **production** CSV | You changed the *runner* (translation logic, source loading) and want to confirm local still reproduces what the warehouse actually does. Run occasionally, not every commit. |
+| `02_validate_output.ipynb` | aug **production** CSV | You changed the *runner* (translation logic, source loading) and want to confirm local still reproduces what the warehouse actually does. Run occasionally, not every commit. |
 | `03_compare_to_baseline.ipynb` | Your own saved **baseline** | You changed the *methodology* (a model's logic) and want to see exactly what shifted. **Run this after every change.** |
