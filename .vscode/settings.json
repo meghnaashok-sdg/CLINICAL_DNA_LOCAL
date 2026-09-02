@@ -2,5 +2,5 @@
   "python.defaultInterpreterPath": ".venv/bin/python",
   "files.associations": { "*.sql": "sql" },
   "sql.linter.enable": false,
-  "jupyter.notebookFileRoot": "${workspaceFolder}"
+  "jupyter.notebookFileRoot": "${fileDirname}"
 }

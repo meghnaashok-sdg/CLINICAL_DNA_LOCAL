@@ -22,6 +22,12 @@ OUTPUT = ROOT / "output"
 BASELINE = ROOT / "baseline"
 
 
+def count_rows(path):
+    """Count data rows in a CSV, robust to Windows' non-UTF8 default encoding."""
+    with open(path, encoding="utf-8", errors="replace") as f:
+        return sum(1 for _ in f) - 1  # minus header
+
+
 def main():
     final_csv = OUTPUT / "recommendations_local.csv"
     if not final_csv.exists():
@@ -54,12 +60,12 @@ def main():
     # 3) a small manifest so you know when/what this baseline is
     manifest = {
         "saved_at": datetime.now(timezone.utc).isoformat(),
-        "final_rows": sum(1 for _ in open(BASELINE / "recommendations_baseline.csv")) - 1,
+        "final_rows": count_rows(BASELINE / "recommendations_baseline.csv"),
         "models_included": n_models,
         "note": "Snapshot of output/ at save time. Compare future runs against "
                 "this with notebooks/03_compare_to_baseline.ipynb.",
     }
-    with open(BASELINE / "manifest.json", "w") as f:
+    with open(BASELINE / "manifest.json", "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
     print(f"Baseline saved to {BASELINE}/")
