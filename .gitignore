@@ -1,4 +1,4 @@
-# ---- Data: never commit Manish's raw extracts (large + sensitive) ----
+# ---- Data: never commit  raw extracts (large + sensitive) ----
 data/*.csv
 data/*.parquet
 output/*.csv
@@ -15,4 +15,3 @@ venv/
 .DS_Store
 *.duckdb
 
-README.md

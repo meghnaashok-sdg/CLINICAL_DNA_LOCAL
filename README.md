@@ -74,7 +74,7 @@ main        ← BASE: the untouched compiled code + this runner   (commit 1)
              ↑ every change is a commit on top of this
 ```
 
-- **Commit 1 (base):** the compiled models exactly as Manish sent them + this local runner.
+- **Commit 1 (base):** the compiled models exactly in sf.
   This is the reference point — the "what production does today" snapshot.
 - **Subsequent commits:** your actual changes (e.g. the Antelligence-enriched clustering,
   wiring up `next_step`, de-hardcoding thresholds). Each change = its own commit/branch,
@@ -88,12 +88,7 @@ Suggested branch names: `feat/antelligence-clustering`, `fix/next-step-wiring`,
 
 ## Validating against production
 
-`output/recommendations_local.csv` should match the shape of Manish's
-`august_2026_recommendations.csv` (same 29 columns, ~37.8k rows, opportunity mean ~$20–30,
-median $0, exactly 14 samples/TM, education on ~5–13% of clinics). The month differs
-(this run = September, because the data now extends to Aug). Use the
-**Recommendation-QA notebook** to diff any run against the baseline.
-
+TBD
 ---
 
 ## Files
