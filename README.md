@@ -1,26 +1,5 @@
 # Clinic DNA — Local Pipeline (DuckDB)
 
-Run the **exact compiled dbt models** on your laptop against Manish's CSV extracts,
-instead of Snowflake — so you can read, run, and change the logic while waiting on
-warehouse access. Output matches production.
-
----
-
-## Why this exists
-
-The pipeline is 9 dbt SQL models that normally run in Snowflake reading
-`SBX_EXT_SALES_HUB.HILLS_US.*` tables. Without access you can't run them there.
-This project:
-- loads the **4 source tables** (CSV exports from Manish) into DuckDB,
-- runs the **9 compiled models in order** (each output feeds the next),
-- writes the final recommendations to `output/recommendations_local.csv`.
-
-**The model SQL in `models/` is byte-for-byte identical to what's in the warehouse.**
-We never edit the vendor code — all Snowflake→DuckDB translation happens at *run time*
-inside `run_pipeline.py`. That keeps `models/` as a clean **base** for version control.
-
----
-
 ## One-time setup
 
 ```bash
@@ -29,7 +8,7 @@ python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 2. put Manish's 4 CSVs in data/  (see data/README.md — they're git-ignored)
+# 2. put the 4 CSVs in data/  (see data/README.md — they're git-ignored)
 ```
 
 ## Run it
@@ -122,7 +101,7 @@ median $0, exactly 14 samples/TM, education on ~5–13% of clinics). The month d
 ```
 run_pipeline.py       ← the runner (loads CSVs, translates, runs 9 models)
 models/               ← the 9 compiled dbt models (BASE — do not edit)
-data/                 ← Manish's CSVs go here (git-ignored)
+data/                 ←  CSVs go here (git-ignored)
 output/               ← results land here (git-ignored)
 scripts/explore.py    ← interactive: inspect any intermediate table
 requirements.txt
