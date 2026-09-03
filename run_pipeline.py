@@ -148,7 +148,7 @@ DUCKDB_RESERVED_ALIASES = ["at"]
 def read_model_sql(model_name):
     """Read a compiled model file, strip the warehouse prefix, and make it
     DuckDB-safe — without modifying the file on disk."""
-    sql = (MODELS / f"{model_name}.sql").read_text()
+    sql = (MODELS / f"{model_name}.sql").read_text(encoding="utf-8")
 
     # 1) Strip the schema prefix -> references become bare local table names.
     sql = sql.replace(SCHEMA_PREFIX, "")
@@ -205,6 +205,7 @@ def run_model(con, model_name, peek=False, dump_dir=None):
 # ---------------------------------------------------------------------------
 def main(peek=False, dump_models=False):
     con = duckdb.connect()  # in-memory; nothing to clean up
+    con.execute("SET threads TO 1")
     install_snowflake_compat(con)
     load_sources(con)
 
