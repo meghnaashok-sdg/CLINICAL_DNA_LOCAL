@@ -116,7 +116,7 @@ top_dc as (
     from clinic_shares
     qualify row_number() over (
         partition by clinic_id
-        order by clinic_avg_monthly_sales desc nulls last
+        order by clinic_avg_monthly_sales desc nulls last, disease_category, species
     ) = 1
 
 ),

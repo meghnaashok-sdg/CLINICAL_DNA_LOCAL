@@ -300,7 +300,7 @@ row_edu_candidates as (
 
         row_number() over (
             partition by ship_to_sales_territory_description
-            order by edu_score desc
+            order by edu_score desc, ship_to_account_number, disease_category, species
         ) as edu_rank,
 
         ceil(
@@ -354,7 +354,7 @@ best_visit_row as (
     from row_scored_final
     qualify row_number() over (
         partition by ship_to_account_number
-        order by visit_score_raw desc
+        order by visit_score_raw desc, disease_category, species
     ) = 1
 
 ),
@@ -479,7 +479,7 @@ sample_ranked as (
         14 as num_samples_for_tm,
         row_number() over (
             partition by ship_to_sales_territory_description
-            order by sample_score desc
+            order by sample_score desc, ship_to_account_number
         ) as sample_rank
         
     from all_clinic_actions
@@ -586,7 +586,7 @@ dc_share as (
 
         case
             when c.clinic_last_12m_sales > 0
-            then d.dc_last_12m_sales / c.clinic_last_12m_sales
+            then round(d.dc_last_12m_sales / c.clinic_last_12m_sales, 6)
             else 0
         end as dc_share_pct
 
@@ -739,12 +739,12 @@ with_rankings as (
         
         row_number() over (
             partition by ship_to_account_number
-            order by disease_opportunity desc
+            order by disease_opportunity desc, disease_expected_12m_sales desc, disease_category, species
         ) as clinic_disease_rank,
         
         row_number() over (
             partition by ship_to_sales_territory_description, disease_category, species
-            order by disease_opportunity desc
+            order by disease_opportunity desc, disease_expected_12m_sales desc, ship_to_account_number
         ) as territory_disease_rank
 
     from actions_with_diseases
