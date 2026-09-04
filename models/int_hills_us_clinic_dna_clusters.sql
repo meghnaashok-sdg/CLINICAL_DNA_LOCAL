@@ -46,7 +46,7 @@ client_last_streak as (
     from df_active_sales
     qualify row_number() over (
         partition by ship_to_account_number
-        order by invoice_month desc
+        order by invoice_month desc, disease_category, species
     ) = 1
 
 ),

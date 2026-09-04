@@ -93,13 +93,13 @@ final as (
         scenario_clinic,
         scenario_disease_category,
         
-        new_expected_12_months_sales,
-        new_expected_12_months_volume,
+        round(new_expected_12_months_sales, 2)     as new_expected_12_months_sales,
+        round(new_expected_12_months_volume, 2)    as new_expected_12_months_volume,
         clinic_avg_monthly_sales,
         clinic_avg_monthly_volume,
-        final_monthly_opportunity,
-        final_monthly_opportunity_volume,
-        
+        round(final_monthly_opportunity, 2)        as final_monthly_opportunity,
+        round(final_monthly_opportunity_volume, 2) as final_monthly_opportunity_volume,     
+           
         ly_monthly_sales,
         ly_monthly_volume,
         total_ly_sales,
