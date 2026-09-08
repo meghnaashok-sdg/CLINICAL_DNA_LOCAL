@@ -34,7 +34,8 @@ sales_base as (
         invoice_month,
         sales_usd_disease_category,
         sales_volume_disease_category,
-        scenario_disease_category
+        scenario_disease_category,
+        months_since_new_or_recover_scenario_clinic
 
     from SBX_EXT_SALES_HUB.HILLS_US.int_hills_us_clinic_dna_scenario_analysis_joined
 
@@ -48,7 +49,12 @@ rolling_12m as (
         sb.species,
 
         sum(sb.sales_usd_disease_category)    as sales_12m,
-        sum(sb.sales_volume_disease_category) as volume_12m
+        sum(sb.sales_volume_disease_category) as volume_12m,
+
+        -- active months for this clinic (capped at 12), matching clusters.sql's
+        -- definition of "average monthly sales" so both models agree.
+        least(coalesce(max(sb.months_since_new_or_recover_scenario_clinic), 12), 12)
+            as active_months
 
     from sales_base sb
     cross join as_of a
@@ -65,8 +71,10 @@ clinic_dc_avg as (
         clinic_id,
         disease_category,
         species,
-        sales_12m  / 12.0 as clinic_avg_monthly_sales,
-        volume_12m / 12.0 as clinic_avg_monthly_volume
+        -- Divide by ACTIVE months (capped 12), not a flat 12, so a new/recovering
+        -- clinic isn't made to look artificially small. Matches clusters.sql.
+        sales_12m  / nullif(active_months, 0) as clinic_avg_monthly_sales,
+        volume_12m / nullif(active_months, 0) as clinic_avg_monthly_volume
 
     from rolling_12m
 
