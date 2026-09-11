@@ -65,7 +65,7 @@ rolling_12m as (
         sb.species,
 
         sum(sb.sales_usd_disease_category)    as sales_12m,
-        sum(sb.sales_volume_disease_category) as volume_12m,
+        sum(sb.sales_volume_disease_category) as volume_12m
 
     from sales_base sb
     cross join as_of a
