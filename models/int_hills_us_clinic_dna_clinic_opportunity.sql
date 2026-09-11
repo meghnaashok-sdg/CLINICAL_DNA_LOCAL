@@ -41,6 +41,22 @@ sales_base as (
 
 ),
 
+-- The clinic's CURRENT streak length: the months_since_new_or_recover value from
+-- the single most recent month only - replicates clusters.sql's client_last_streak CTE
+clinic_last_streak as (
+
+    select
+        clinic_id,
+        months_since_new_or_recover_scenario_clinic
+
+    from sales_base
+    qualify row_number() over (
+        partition by clinic_id
+        order by invoice_month desc, disease_category, species
+    ) = 1
+
+),
+
 rolling_12m as (
 
     select
@@ -50,11 +66,6 @@ rolling_12m as (
 
         sum(sb.sales_usd_disease_category)    as sales_12m,
         sum(sb.sales_volume_disease_category) as volume_12m,
-
-        -- active months for this clinic (capped at 12), matching clusters.sql's
-        -- definition of "average monthly sales" so both models agree.
-        least(coalesce(max(sb.months_since_new_or_recover_scenario_clinic), 12), 12)
-            as active_months
 
     from sales_base sb
     cross join as_of a
@@ -68,15 +79,18 @@ rolling_12m as (
 clinic_dc_avg as (
 
     select
-        clinic_id,
+        r.clinic_id,
         disease_category,
         species,
-        -- Divide by ACTIVE months (capped 12), not a flat 12, so a new/recovering
-        -- clinic isn't made to look artificially small. Matches clusters.sql.
-        sales_12m  / nullif(active_months, 0) as clinic_avg_monthly_sales,
-        volume_12m / nullif(active_months, 0) as clinic_avg_monthly_volume
-
-    from rolling_12m
+        -- Divide by the clinic's CURRENT streak (capped at 12), matching
+        -- clusters.sql's client_last_streak logic.
+        r.sales_12m / nullif(least(coalesce(cls.months_since_new_or_recover_scenario_clinic, 12), 12), 0) 
+            as clinic_avg_monthly_sales,
+        r.volume_12m / nullif(least(coalesce(cls.months_since_new_or_recover_scenario_clinic, 12), 12), 0)
+            as clinic_avg_monthly_volume
+    from rolling_12m r 
+    left join clinic_last_streak cls
+    on r.clinic_id = cls.clinic_id
 
 ),
 
