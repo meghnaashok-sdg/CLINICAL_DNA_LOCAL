@@ -293,13 +293,14 @@ clustered as (
 cluster_percentiles as (
 
     select
+        ship_to_customer_tier,
         cluster,
         percentile_cont(0.25) within group (order by monthly_sales) as p25,
         percentile_cont(0.75) within group (order by monthly_sales) as p75
 
     from clustered
     where cluster <> 'Outliers'
-    group by cluster
+    group by ship_to_customer_tier, cluster
 
 ),
 
@@ -307,13 +308,14 @@ cluster_percentiles as (
 cluster_percentiles_volume as (
 
     select
+        ship_to_customer_tier,
         cluster_volume,
         percentile_cont(0.25) within group (order by monthly_volume) as p25_vol,
         percentile_cont(0.75) within group (order by monthly_volume) as p75_vol
 
     from clustered
     where cluster_volume <> 'Outliers'
-    group by cluster_volume
+    group by ship_to_customer_tier, cluster_volume
 
 ),
 
@@ -343,9 +345,11 @@ segmented as (
 
     from clustered c
     left join cluster_percentiles cp
-        on c.cluster = cp.cluster
+        on  c.ship_to_customer_tier = cp.ship_to_customer_tier
+        and c.cluster = cp.cluster
     left join cluster_percentiles_volume cpv
-        on c.cluster_volume = cpv.cluster_volume
+        on  c.ship_to_customer_tier = cpv.ship_to_customer_tier
+        and c.cluster_volume = cpv.cluster_volume
 
 ),
 
